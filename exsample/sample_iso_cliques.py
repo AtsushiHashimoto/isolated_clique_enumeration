@@ -3,6 +3,7 @@
 
 import sys
 import numpy as np
+sys.path.append('../isoclique')
 import isolated_cliques as ic
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -18,12 +19,14 @@ def generate_random_color_list(num):
 
 if __name__ == '__main__':
     G = nx.karate_club_graph()
-    E = G.edges()
-    print(E)
+    print(G.edges())
+    ic_graph = ic.IsolatedCliques(G.edges())
 
-    #cliques = [[1,2,3],[5,6,7]]
-    cliques = ic.find_isolated_cliques(G.number_of_nodes(),G.edges,c)
+    iso_cliques = ic_graph.enumerate(isolation_factor=3)
 
+    print("Isolated Cliques")
+    [print(ic) for ic in iso_cliques]
+    sys.exit()
 
 
     # drawing
