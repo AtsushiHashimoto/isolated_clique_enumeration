@@ -24,6 +24,8 @@ if __name__ == '__main__':
     #cliques = [[1,2,3],[5,6,7]]
     cliques = ic.find_isolated_cliques(G.number_of_nodes(),G.edges,c)
 
+
+
     # drawing
     rand_colors = generate_random_color_list(len(cliques))
     pos=nx.spring_layout(G) # positions for all nodes
