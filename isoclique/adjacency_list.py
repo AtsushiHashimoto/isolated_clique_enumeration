@@ -83,27 +83,28 @@ class AdjacencyList(LabelEncoder):
     '''
     edge_list_format = 'auto' | 'list' | 'matrix' | 'neighbors'
     '''
-    def __init__(self, edges, edge_list_format='list', _labels='auto',encode_method='array',debug_mode=True, do_sort=True):
+    def __init__(self, edges, edge_list_format='list', labels='auto',encode_method='array',debug_mode=True, do_sort=True):
         self.debug_mode = debug_mode
-        if _labels != 'auto':
-            labels = _labels
+        if labels != 'auto':
+            labels_ = labels
         else:
-            labels = list(set( \
+            labels_ = list(set( \
                 [item for sublist in edges for item in sublist] \
                 ))
 
-        if labels == list(range(len(_labels))):
-            super(AdjacencyList,self).__init__(labels,encode_method=None)
+        if labels_ == list(range(len(labels))):
+            super(AdjacencyList,self).__init__(labels_,encode_method=None)
         else:
-            super(AdjacencyList,self).__init__(labels,encode_method=encode_method)
+            super(AdjacencyList,self).__init__(labels_,encode_method=encode_method)
 
-        self.n_nodes = len(labels)
+        self.n_nodes = len(labels_)
         _edges = self.encode(edges,2)
 
         if edge_list_format=='list':
             self.adjacency_list = self._get_neighbors_from_list(_edges)
         elif edge_list_format=='mat':
            self.adjacency_list = self._get_neighbors_from_mat(_edges)
+
 
         if self.debug_mode and \
            not self._debug_check_edge_symmetry(range(self.n_nodes)):
@@ -113,22 +114,24 @@ class AdjacencyList(LabelEncoder):
             return
     
         # count d(v)
-        self.degrees = np.zeros(self.n_nodes)
+        self.degrees = np.zeros(self.n_nodes,dtype='int32')
         for i in range(self.n_nodes):
             self.degrees[i]=len(self.adjacency_list[i])
         self.n_edges = np.sum(self.degrees) / 2
 
         # sort adjacency list
         self._sort_nodes()
+        
         if self.debug_mode and not self._debug_check_order(range(self.n_nodes),deep=True):
             warn("DEBUG: graph is not correctly sorted")
+
 
     def _sort_nodes(self):
         deg_idx = list(zip(self.degrees,range(self.n_nodes)))
         
         encode_lut = np.zeros(self.n_nodes,dtype='int32')
         decode_lut = np.zeros(self.n_nodes,dtype='int32')
-        _degrees = np.zeros(self.n_nodes)
+        _degrees = np.zeros(self.n_nodes,dtype='int32')
         _neighbors = [[] for i in range(self.n_nodes)]
         for rank,(deg,idx) in enumerate(sorted(deg_idx)):
             decode_lut[rank] = idx
@@ -140,7 +143,8 @@ class AdjacencyList(LabelEncoder):
 
         # temporary set encode_lut to encode current adjacency list
         self.encode_lut = encode_lut
-        self.adjacency_list = self.encode(_neighbors)
+        self.adjacency_list = self.encode(_neighbors,2)
+
 
         # update lookup tables.
         self.update_codes(decode_lut,encode_lut)
@@ -158,6 +162,7 @@ class AdjacencyList(LabelEncoder):
             neighbors[edge[0]].append(edge[1])
             neighbors[edge[1]].append(edge[0])
         return neighbors
+    
     def _get_neighbors_from_mat(self,edge_mat):
         if self.debug_mode:
             if len(edge_mat) != self.n_nodes:
