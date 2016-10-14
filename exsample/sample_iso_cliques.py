@@ -9,6 +9,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import random
 
+import time
+
 def generate_random_color():
     return '#{:X}{:X}{:X}'.format(*[random.randint(16, 255) for _ in range(3)])
 def generate_random_color_list(num):
@@ -20,12 +22,22 @@ def generate_random_color_list(num):
 if __name__ == '__main__':
     G = nx.karate_club_graph()
     print(G.edges())
+
+    start = time.time()
     ic_graph = ic.IsolatedCliques(G.edges())
+    elapsed_time = time.time()-start
+    print("%.5f sec. elapsed for graph sorting."%elapsed_time)
+
 
     iso_cliques = ic_graph.enumerate(isolation_factor=3)
+    elapsed_time = time.time()-start
+    print("%.5f sec. elapsed for enumeration."%elapsed_time)
 
     print("Isolated Cliques")
-    [print(ic) for ic in iso_cliques]
+    for ic in iso_cliques:
+        stats = ic_graph.evaluate_subgraph(ic)
+        print("[isolation, ave_deg, min_deg] = ",list(stats))
+        print("Members: ",ic)
     sys.exit()
 
 
