@@ -22,14 +22,9 @@ def generate_random_color_list(num):
 if __name__ == '__main__':
 
     encode_method='list'
-    V = [0,1,2,4]
-    E = [[0,4],[0,2],[1,4],[2,4]]
-    S = [1,2,4]
-    indicated_label_order = [4,2,1,0]    
-    
-    V = [v+1 for v in V]
-    E = [[e[0]+1,e[1]+1] for e in E]
-    S = [v+1 for v in S]
+    V = [1,2,3,5,6]
+    E = [[1,5],[1,3],[2,5],[3,5]]
+    S = [2,3,6]
     indicated_label_order = [5,3,2,1]    
     print(E)  
 
