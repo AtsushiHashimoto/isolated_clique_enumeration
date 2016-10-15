@@ -113,9 +113,9 @@ class _AdjacencyList(LabelEncoder):
         else:
             super(_AdjacencyList,self).__init__(labels_,encode_method=encode_method)
 
-        print("labels: ",labels_)
+        #print("labels: ",labels_)
         self.set_decode_lut(labels_)
-        print("encode_lut from above labels: ",self.encode_lut)
+        #print("encode_lut from above labels: ",self.encode_lut)
 
         self.n_nodes = len(labels_)
         _edges = self.encode(edges,2)
@@ -126,11 +126,9 @@ class _AdjacencyList(LabelEncoder):
         elif edge_list_format=='mat':
             self._adjacency_list = self._get_neighbors_from_mat(_edges)
         else:
-            print(_edges)
+            #print(_edges)
             self._adjacency_list = _edges #self.reorder(_edges)
 
-        for idx,neigh in enumerate(self._adjacency_list):
-            print(idx,": ",neigh)
 
         if self.debug_mode and not self._debug_check_self_loop():
             warn("DEBUG: graph has self loop.")            
@@ -159,47 +157,51 @@ class _AdjacencyList(LabelEncoder):
         
         
     def _sort_nodes(self):
-        outer_label_set = sorted(self.nodes())
-        abs_decode_lut = [None] * len(self.decode_lut)
-        for idx,l in sorted(enumerate(outer_label_set),key=lambda x:self._degrees[x[0]]):
-            abs_decode_lut[idx] = l
- #       abs_decode_lut = [temp[i] for i in sorted(range(self.n_nodes),key=lambda x:self._degrees[x])]
-        abs_encode_lut = self._gen_encode_lut_(abs_decode_lut, encode_method='list')
+        outer_label_set = self.decode_lut
 
-
-        # sort each elem in adjacency_list
-        self._adjacency_list = [sorted(neigh,key=lambda x:self._degrees[x]) for neigh in self._adjacency_list]        
+        #self._print("BEFORE adj. list sort")
 
         # sort adjacency list with degree together
-        deg_adjs = sorted(zip(self._degrees,self._adjacency_list))
-        self._degrees = [x[0] for x in deg_adjs]
-        self._adjacency_list = [x[1] for x in deg_adjs]
+        deg_dec_adjs = sorted(zip(self._degrees,outer_label_set,self._adjacency_list))
+        self._degrees = [x[0] for x in deg_dec_adjs]
+        self._adjacency_list = [x[2] for x in deg_dec_adjs]
+
+        abs_decode_lut = [x[1] for x in deg_dec_adjs]
+        abs_encode_lut = self._gen_encode_lut_(abs_decode_lut, encode_method='list')
+        #print("abs_decode_lut : ",abs_decode_lut)
+        #print("abs_encode_lut: ",abs_encode_lut)
+        #print("self.decode_lut: ",self.decode_lut)
+        #print("self.encode_lut: ",self.encode_lut)
+        
+
+        ## self._print("AFTER adj. list sort") #<- mearningless because of broken degrees
+
 
         # encode _adjacency_list and degrees
         for idx,neigh in enumerate(self._adjacency_list):
-            #print(idx,": ",neigh)
-            #print("(pre encode)  ",idx,": ",self._adjacency_list[idx])
-            #for x in neigh:                
-            #    print(x, "->", self.decode_lut[x], " -> ", abs_encode_lut[self.decode_lut[x]])
+            '''
+            print(idx,": ",neigh)
+            print("(pre encode)  ",idx,": ",self._adjacency_list[idx])
+            for x in neigh:                
+                print(x, "->", self.decode_lut[x], " -> ", abs_encode_lut[self.decode_lut[x]])
+            '''
             self._adjacency_list[idx] = [abs_encode_lut[self.decode_lut[x]] for x in neigh] 
             #print("(post encode) ",idx,": ",self._adjacency_list[idx])
+        #self._print("AFTER adj. list sorting & all elem. encoding")
     
+        # sort each elem in adjacency_list
+        self._adjacency_list = [sorted(neigh,key=lambda x:self._degrees[x]) for neigh in self._adjacency_list]        
             
+        #self._print("AFTER elem sort")
 
 
         # set new decode/encode/labels
         self.set_decode_lut(abs_decode_lut)
 
     def _subgraph(self, S, do_sort=False):
-        adj_list = [[] for v in S]
-        for v,neigh in enumerate(self._adjacency_list):
-            print(v, ": ", neigh)
-        
-            
+        adj_list = [[] for v in S]            
         for idx,v in enumerate(S):
-            adj_list[idx] = list(set(self._adjacency_list[v]).intersection(S))
-            print(v, ": ",adj_list[idx],"=",S," and ",self._adjacency_list[v])
-               
+            adj_list[idx] = list(set(self._adjacency_list[v]).intersection(S))               
         return adj_list
         
    
@@ -266,7 +268,6 @@ class _AdjacencyList(LabelEncoder):
         c_adjacency_list = [[] for v in self._labels]
         self.was_clique = True
         for i,j in iters.combinations(range(self.n_nodes),2):
-            print(i, ", ",j)
             if j not in self._adjacency_list[i]:
                 c_adjacency_list[i].append(j)
                 c_adjacency_list[j].append(i)
@@ -328,8 +329,6 @@ class AdjacencyList(_AdjacencyList):
     def subgraph(self, S, do_sort=False):
         S_ = self.encode(S,1)
         adj_list = self._subgraph(S_, False)
-        for idx,neigh in zip(S_,adj_list):
-            print(idx, ": ", neigh)
         
         G_S = AdjacencyList(adj_list, edge_list_format='neighbors', \
                              labels=S_,\
