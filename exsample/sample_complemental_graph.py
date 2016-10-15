@@ -6,10 +6,10 @@ sys.path.append('../isoclique')
 import adjacency_list as al
 #import isolated_cliques as ic
 
-'''
+
 import random
-
-
+import itertools as iters
+'''
 def generate_random_color():
     return '#{:X}{:X}{:X}'.format(*[random.randint(16, 255) for _ in range(3)])
 def generate_random_color_list(num):
@@ -22,14 +22,24 @@ def generate_random_color_list(num):
 if __name__ == '__main__':
 
     encode_method='list'
-    V = [1,2,3,5,6]
-    E = [[1,5],[1,3],[2,5],[3,5]]
-    S = [2,3,6]
-    indicated_label_order = [5,3,2,1]    
+    n_nodes = 10
+    density = 0.4
+    n_edges = int((n_nodes*(n_nodes-1)/2)*density)
+    V = list(range(n_nodes))
+    E = list(iters.combinations(V,2))
+    random.shuffle(E)
+    E = E[:n_edges]
+    print(V)
     print(E)  
 
-    print("indicated label order: ",indicated_label_order)
-    G = al.AdjacencyList(E,labels=indicated_label_order,do_sort=True,encode_method=encode_method)
+    random.shuffle(V)
+    n_subgraph = int(n_nodes/2)
+    S = V[:n_subgraph]
+
+    random.shuffle(V) 
+
+    print("indicated label order: ",V)
+    G = al.AdjacencyList(E,labels=V,do_sort=True,encode_method=encode_method)
     nodes = G.nodes()
     edges = G.edges()
     print("G(V,E):")
