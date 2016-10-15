@@ -113,9 +113,9 @@ class _AdjacencyList(LabelEncoder):
         else:
             super(_AdjacencyList,self).__init__(labels_,encode_method=encode_method)
 
-        #print("labels: ",labels_)
+        print("labels: ",labels_)
         self.set_decode_lut(labels_)
-        #print("encode_lut from above labels: ",self.encode_lut)
+        print("encode_lut from above labels: ",self.encode_lut)
 
         self.n_nodes = len(labels_)
         _edges = self.encode(edges,2)
@@ -167,7 +167,7 @@ class _AdjacencyList(LabelEncoder):
         self._adjacency_list = [x[2] for x in deg_dec_adjs]
 
         abs_decode_lut = [x[1] for x in deg_dec_adjs]
-        abs_encode_lut = self._gen_encode_lut_(abs_decode_lut, encode_method='list')
+        abs_encode_lut = self._gen_encode_lut_(abs_decode_lut, encode_method=self.encode_method)
         #print("abs_decode_lut : ",abs_decode_lut)
         #print("abs_encode_lut: ",abs_encode_lut)
         #print("self.decode_lut: ",self.decode_lut)
