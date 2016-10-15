@@ -9,8 +9,9 @@ class LabelEncoder:
     '''
     encode_method = 'list' | 'hash'
     '''
-    def __init__(self, labels, encode_method = 'list'):
+    def __init__(self, labels, encode_method = 'list',parent=None):
         self.encode_method = encode_method
+
         if encode_method not in ['list','hash']:
             message = "Unknown encode_method: %s"%str(encode_method)
             warn(message)
@@ -21,6 +22,17 @@ class LabelEncoder:
             decode_lut[idx] = l
         self.n_labels = len(labels)
         self.set_decode_lut(decode_lut)
+        if parent:
+            self.set_parent(parent)
+        else:
+            self.parent = None
+    def set_parent(self,parent):
+        self.parent = parent
+        self.reflect_parent()
+        
+    def reflect_parent(self):
+        labels = [self.parent.decode_lut[self.decode_lut[idx]] for idx in range(self.n_labels)]
+        self.set_decode_lut(labels)
     
     def encode(self,val, depth):
         if not self.encode_method:
@@ -30,7 +42,7 @@ class LabelEncoder:
         if not self.encode_method:
             return val
         return self._decode(val,depth)
-
+    
     def _encode(self,val,depth):
         if depth==0:
             return self.encode_lut[val]
@@ -149,8 +161,8 @@ class _AdjacencyList(LabelEncoder):
             print(message)
         for v,neigh in enumerate(self._adjacency_list):
             print(v,": ",neigh, " degree=> ("+str(self._degrees[v])+"): ",", ".join(["("+str(self._degrees[n])+")" for n in neigh]))
-
-
+        
+        
     def _sort_nodes(self):
         outer_label_set = sorted(self.nodes())
         abs_decode_lut = [None] * len(self.decode_lut)
@@ -163,15 +175,12 @@ class _AdjacencyList(LabelEncoder):
 
 
         # sort each elem in adjacency_list
-        self._print("BEFORE SORT neigh")
         self._adjacency_list = [sorted(neigh,key=lambda x:self._degrees[x]) for neigh in self._adjacency_list]        
-        self._print("After SORT neigh")
 
         # sort adjacency list with degree together
         deg_adjs = sorted(zip(self._degrees,self._adjacency_list))
         self._degrees = [x[0] for x in deg_adjs]
         self._adjacency_list = [x[1] for x in deg_adjs]
-        self._print("After SORT list")
 
         # encode _adjacency_list and degrees
         for idx,neigh in enumerate(self._adjacency_list):
@@ -199,12 +208,14 @@ class _AdjacencyList(LabelEncoder):
 
     def _subgraph(self, S, do_sort=False):
         adj_list = [[] for v in S]
-        print("_subgraph: INNER")
-        for v,neigh in zip(self._labels,self._adjacency_list):
+        print("S = ", S)
+        print("graph G: INNER")
+        for v,neigh in enumerate(self._adjacency_list):
             print(v, ": ", neigh)
+        
             
-        print("_subgraph: INNER S: ",S)
-        for idx, v in enumerate(S):
+        print("subgraph G(",S,"): INNER")
+        for idx,v in enumerate(S):
             adj_list[idx] = list(set(self._adjacency_list[v]).intersection(S))
             print(v, ": ",adj_list[idx],"=",S," and ",self._adjacency_list[v])
                
@@ -332,14 +343,17 @@ class AdjacencyList(_AdjacencyList):
         print("encode lut: ",self.encode_lut)
         print("outer index: ",S)
         print("inner index: ",S_)
-        adj_list = self._subgraph(S_, do_sort)
+        adj_list = self._subgraph(S_, False)
+
+        print("###########")
+        for idx,neigh in zip(S_,adj_list):
+            print(idx, ": ", neigh)
+        
         G_S = AdjacencyList(adj_list, edge_list_format='neighbors', \
                              labels=S_,\
                              encode_method='list',debug_mode=self.debug_mode,
                              do_sort=do_sort)
-        # decode: S_ to S
-        S_2S = get_map_lut(G_S.encode(S_,1),S)
-        G_S.set_decode_lut([x for x in S_2S if x])
+        G_S.set_parent(self)
         return G_S
 
 # get a mapping look-up-table from a set A to another set B        
