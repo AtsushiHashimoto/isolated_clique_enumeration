@@ -156,11 +156,6 @@ class _AdjacencyList(LabelEncoder):
 
         self.is_sorted = True
 
-    def _print(self,message=""):
-        if len(message)>0:
-            print(message)
-        for v,neigh in enumerate(self._adjacency_list):
-            print(v,": ",neigh, " degree=> ("+str(self._degrees[v])+"): ",", ".join(["("+str(self._degrees[n])+")" for n in neigh]))
         
         
     def _sort_nodes(self):
@@ -169,9 +164,7 @@ class _AdjacencyList(LabelEncoder):
         for idx,l in sorted(enumerate(outer_label_set),key=lambda x:self._degrees[x[0]]):
             abs_decode_lut[idx] = l
  #       abs_decode_lut = [temp[i] for i in sorted(range(self.n_nodes),key=lambda x:self._degrees[x])]
-        print("abs_decode_lut: ", abs_decode_lut)
         abs_encode_lut = self._gen_encode_lut_(abs_decode_lut, encode_method='list')
-        print("abs_encode_lut: ",abs_encode_lut)
 
 
         # sort each elem in adjacency_list
@@ -193,28 +186,16 @@ class _AdjacencyList(LabelEncoder):
     
             
 
-        self._print("After ENCODE")
-
-
-        print("self.decode_lut (must be [4,3,2,1]):",self.decode_lut)
-        print("self.encode_lut (must be [-1,3,2,1,0]):",self.encode_lut)
-        
-        print("abs_decode_lut (must be [1,2,3,4]):",abs_decode_lut)
-        print("abs_encode_lut (must be [-1,0,1,2,3]):",abs_encode_lut)
-
 
         # set new decode/encode/labels
         self.set_decode_lut(abs_decode_lut)
 
     def _subgraph(self, S, do_sort=False):
         adj_list = [[] for v in S]
-        print("S = ", S)
-        print("graph G: INNER")
         for v,neigh in enumerate(self._adjacency_list):
             print(v, ": ", neigh)
         
             
-        print("subgraph G(",S,"): INNER")
         for idx,v in enumerate(S):
             adj_list[idx] = list(set(self._adjacency_list[v]).intersection(S))
             print(v, ": ",adj_list[idx],"=",S," and ",self._adjacency_list[v])
@@ -283,12 +264,13 @@ class _AdjacencyList(LabelEncoder):
         
     def __complement_dense_graph(self):
         c_adjacency_list = [[] for v in self._labels]
-        self.is_clique = True
+        self.was_clique = True
         for i,j in iters.combinations(range(self.n_nodes),2):
+            print(i, ", ",j)
             if j not in self._adjacency_list[i]:
                 c_adjacency_list[i].append(j)
                 c_adjacency_list[j].append(i)
-                self.is_clique = False
+                self.was_clique = False
         self._adjacency_list = c_adjacency_list
         self._sort_nodes()
         
@@ -320,6 +302,11 @@ class _AdjacencyList(LabelEncoder):
                     print(i, ": ", neigh)
                 return False
         return True
+    def _print(self,message=""):
+        if len(message)>0:
+            print(message)
+        for v,neigh in enumerate(self._adjacency_list):
+            print(v,": ",neigh, " degree=> ("+str(self._degrees[v])+"): ",", ".join(["("+str(self._degrees[n])+")" for n in neigh]))
 
 
 class AdjacencyList(_AdjacencyList):
@@ -340,12 +327,7 @@ class AdjacencyList(_AdjacencyList):
         
     def subgraph(self, S, do_sort=False):
         S_ = self.encode(S,1)
-        print("encode lut: ",self.encode_lut)
-        print("outer index: ",S)
-        print("inner index: ",S_)
         adj_list = self._subgraph(S_, False)
-
-        print("###########")
         for idx,neigh in zip(S_,adj_list):
             print(idx, ": ", neigh)
         
