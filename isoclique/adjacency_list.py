@@ -89,7 +89,7 @@ class LabelEncoder:
 # class to represent any graph/subgraph by list of node with their neighbors
 class _AdjacencyList(LabelEncoder):
     '''
-    edge_list_format = 'auto' | 'list' | 'matrix' | 'neighbors'
+    edge_list_format = 'auto' | 'list' | 'mat' | 'neighbors'
     '''
     def __init__(self, edges, edge_list_format='list',\
                  labels='auto',encode_method='list',\
@@ -103,18 +103,21 @@ class _AdjacencyList(LabelEncoder):
 
         if labels != 'auto':
             labels_ = labels
-        else:
+            self.n_nodes = len(labels_)
+        elif edge_list_format == 'mat':
+            self.n_nodes = len(edges)
+            labels_ = list(range(self.n_nodes))
+        else:           
             labels_ = list(set( \
                 [item for sublist in edges for item in sublist] \
                 ))
-
+            self.n_nodes = len(labels_)
         super(_AdjacencyList,self).__init__(labels_,encode_method=encode_method)
 
         #print("labels: ",labels_)
         self.set_decode_lut(labels_)
         #print("encode_lut from above labels: ",self.encode_lut)
 
-        self.n_nodes = len(labels_)
         _edges = self.encode(edges,2)
         
 
@@ -226,8 +229,9 @@ class _AdjacencyList(LabelEncoder):
                         
         neighbors = [[] for i in range(self.n_nodes)]
         for i,j in iters.combinations(range(self.n_nodes),2):
-            neighbors[i].append(j)
-            neighbors[j].append(i)
+            if edge_mat[i][j]:
+                neighbors[i].append(j)
+                neighbors[j].append(i)
         return neighbors
 
             
