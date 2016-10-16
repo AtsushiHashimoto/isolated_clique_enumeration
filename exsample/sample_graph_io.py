@@ -2,12 +2,10 @@
 # coding: utf-8
 
 import sys
-import numpy as np
 sys.path.append('../isoclique')
 import adjacency_list as al
 #import isolated_cliques as ic
 import networkx as nx
-import matplotlib.pyplot as plt
 import random
 
 import time
@@ -53,8 +51,8 @@ if __name__ == '__main__':
     elapsed_time = time.time()-start
     print("%.5f sec. elapsed for graph sorting."%elapsed_time)
 
-    nodes = sorted_graph.labels
-    neighbors = sorted_graph.decode(sorted_graph.adjacency_list,2)
+    nodes = sorted_graph.nodes()
+    neighbors = sorted_graph.edges()
 
     for v,neigh in zip(nodes,neighbors):
         print(v,": ", neigh)
@@ -65,8 +63,8 @@ if __name__ == '__main__':
     elapsed_time = time.time()-start
     print("%.5f sec. elapsed for graph sorting."%elapsed_time)
 
-    nodes = sorted_graph.labels
-    neighbors = sorted_graph.decode(sorted_graph.adjacency_list,2)
+    nodes = sorted_graph.nodes()
+    neighbors = sorted_graph.edges()
     for v,neigh in zip(nodes,neighbors):
         print(v,": ", neigh)
 
