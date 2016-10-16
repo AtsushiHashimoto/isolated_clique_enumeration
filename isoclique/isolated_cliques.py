@@ -47,7 +47,6 @@ class IsolatedCliques(AdjacencyList):
                                              debug_mode=debug_mode,
                                              do_sort=True,\
                                              )
-        self.pivot_entries = list(zip(self._degrees, self._adjacency_list))
 
 
     def evaluate_subgraph(self,V,assume_clique=False):
@@ -81,11 +80,15 @@ class IsolatedCliques(AdjacencyList):
                     continue
                 (isolation,deg_ave,deg_min) = self._evaluate_subgraph(cand)
 
-                if not (deg_ave == N-1 and isolation <= isolation_factor):
+                if not (deg_ave == N-1 and isolation < isolation_factor):
                     continue
                 cand = set(cand)
                 if not self._is_maximal_blute(cand,ics):
                     continue
+                G_S = self.subgraph(cand,do_sort=False,use_in_global=False)
+                is_clique = G_S.is_clique()
+                if not is_clique:
+                    print(cand,"is not a clique")
                 ics.append(list(cand))
 
             if verbose:
@@ -125,29 +128,13 @@ class IsolatedCliques(AdjacencyList):
             iso_cliques.append([self.lut[i] for i in ic])
         return iso_cliques
         '''
-    
-    def _enumerate1(self):
-        # case: isolation_factor=1
-        pivots_idx = []
-        pivots = []
-        for idx, pivot_entry in enumerate(self.pivot_entries):            
-            if not self._one_pivot_test_a(idx,*pivot_entry,pivots_idx):
-                continue
-            if not self._one_pivot_test_b(idx,*pivot_entry):
-                continue
-            if not self._one_pivot_test_c(idx,*pivot_entry):
-                continue
-            pivots_idx.append(idx)
-            pivots.append([idx]+pivot_entry[1])
-                
-        return pivots_idx, pivots
-        
+
 #    def _enumerate_gen(self,c,c_floor):        
     def _enumerate_gen(self,isolation_factor,callback):        
         pivots_idx = []
         pivots_ref = []
         pivots = []     
-        for idx,pivot_entry in enumerate(self.pivot_entries):
+        for idx,pivot_entry in enumerate(zip(self._degrees,self._adjacency_list)):
             # this is not mentioned in the original paper,
             # but calculation for a vertex with no edges is non-sense.
             if self._degrees[idx]==0:
@@ -157,7 +144,7 @@ class IsolatedCliques(AdjacencyList):
             c_floor = self.my_floor(isolation_factor)
 
             C = self._pivot_trim(idx,*pivot_entry,isolation_factor, c_floor)
-            if not C:               
+            if C == False:               
                 continue
             Qs = self._pivot_enum(idx,*pivot_entry,C,isolation_factor,c_floor)
             if len(Qs)==0:
@@ -174,116 +161,157 @@ class IsolatedCliques(AdjacencyList):
     Utility member functions.
     '''
     def _pivot_scr(self,idx,Qs,pivots_idx,pivots,c,neigh):
-        neigh_ = [n for n in neigh if n<idx]
+        neigh_ = [n for n in neigh if self._degrees[n]<self._degrees[idx]]
         if len(set(pivots).intersection(neigh_))>0:
             return []
 
         Qs = set([tuple(q) for q in Qs])
+        for q in Qs:
+            iscore = self._evaluate_subgraph_assume_clique(q)
+            iscore2 = self._evaluate_subgraph(q)[0]
+            if(iscore==iscore2):
+                continue                   
+            print("####")
+            print(q)
+            G_S = self.subgraph(q, do_sort=False, use_in_global=False)
+            print(G_S.edges(edge_list_format='list'))
+            G_S.complement()
+            print(G_S.edges(edge_list_format='list'))
         Qs = [q for q in Qs if self._evaluate_subgraph_assume_clique(q)<c]        
-        
+        #print(Qs)
         return list(Qs)
         
     def _pivot_enum(self, idx, deg, neigh,C,c,c_floor):
 #        neigh_ = [n for n in neigh if n<idx]
-        c_dd = c_floor - (len(neigh)-len(C))
-        G_C = self.subgraph(C,do_sort=False,use_in_global=False)
-        
+        c_dash = c_floor - (len(neigh)-len(C))
+        G_C = self.subgraph(C,do_sort=False,use_in_global=False)        
         G_C.complement(is_dense=True)
         if G_C.was_clique:
             Qs = [C]
         else:
-            VCs = G_C.enumerate_vertex_covers(at_most = c_dd, candidates=C.copy().remove(idx))
+            VCs = G_C.enumerate_vertex_covers(at_most = c_dash, candidates=C.copy().remove(idx))
             Qs = [[v for v in C if v not in vc] for vc in VCs]            
         return Qs
         
     def _pivot_trim(self, idx, deg, neigh, c, c_floor):
-        neigh_ = [n for n in neigh if n<idx]
+        neigh_ = [n for n in neigh if self._degrees[n]<self._degrees[idx]]
         
         if len(neigh_)>c_floor:
             return False
         C = [idx]+[x for x in neigh if x not in neigh_]
         
-        k = len(neigh)
+        k = len(neigh)+1
         k_dash = len(C)
+        num_neigh_ = len(neigh_)
         C_h = []
         E_C_h = set([])
 
         #print(idx,": ",C)
 
         removed = []
+        # test (a): d(v_{i_j}) must be less than (c+1)k'-1
         for v in C:
-            n_deg= self.pivot_entries[v][0]
+            n_deg= self._degrees[v]
             # v  >= (c+1)*k_dash-1 => False
             if n_deg>=(c+1)*k_dash-1:
                 C.remove(v)
-                ret,removed = self.remove_check(removed,v,c_floor)
+                ret,removed = self.remove_check(removed,v,c_floor,num_neigh_)
                 if not ret:
                     return False
         #print(idx,": ",C)
-                
+
         for h,v in enumerate(C):
-            n_deg,n_neigh = self.pivot_entries[v]
-            #print(h,v)
-            # v has more than or equal to c*k_dash outgoing edges => False
+            if h==0:
+                continue
+            
+            n_deg = self._degrees[v]
+            n_neigh = self._adjacency_list[v]
+            # test(b): v has more than or equal to c*k_dash outgoing edges => False
             outer_neigh = [x for x in n_neigh if x not in C]
             #print("outer_neigh: ", outer_neigh)
             n_out_edges = len(outer_neigh)
             if n_out_edges>=c*k_dash:
                 C.remove(v)
-                ret,removed = self.remove_check(removed,v,c_floor)
+                ret,removed = self.remove_check(removed,v,c_floor,num_neigh_)
                 if not ret:
                     return False
                 continue
             
-            # v has less than k-c_floor adjacent vertices in C => False
+            # test (c): v must have at least k-c_floor adjacent vertices in C => False
             if len(n_neigh)-n_out_edges<(k-c_floor):
                 C.remove(v)
-                ret,removed = self.remove_check(removed,v,c_floor)
+                ret,removed = self.remove_check(removed,v,c_floor,num_neigh_)
                 if not ret:
                     return False
                 continue
             #print(h,v)
 
-            # for h = 1,2,...,k_dash, |E(C_h,neigh_|>=c*(c+1)*h => False
+            # test (d): for h = 1,2,...,k_dash, |E(C_h,neigh_|>=c*(c+1)*h => False
             C_h.append(v)
             E_C_h = E_C_h.union(outer_neigh)
             #print("E(V-C_h): ",E_C_h)
             if len(E_C_h)>= c*(c+1)*(h+1):
                 C.remove(v)
-                ret,removed = self.remove_check(removed,v,c_floor)
+                ret,removed = self.remove_check(removed,v,c_floor,num_neigh_)
                 if not ret:
                     return False
                 continue
         #print(idx,": ",C)
         return C
-        
-    def _one_pivot_test_a(self, idx, deg, neigh, pivots):
-        neigh_ = [n for n in neigh if n<idx]
-        if not comm_seq(neigh_,pivots):
+
+
+     
+    def _enumerate1(self):
+        # case: isolation_factor=1
+        pivots_idx = []
+        pivots = []
+        for idx, pivot_entry in enumerate(zip(self._degrees,self._adjacency_list)):
+            if self._degrees[idx]==0:
+                # ignore a vertex with no edges.
+                continue
+            if not self._one_pivot_test_a(idx,*pivot_entry,pivots_idx):
+                continue
+            if not self._one_pivot_test_b(idx,*pivot_entry):
+                continue
+            if not self._one_pivot_test_c(idx,*pivot_entry):
+                continue
+            pivots_idx.append(idx)
+            pivots.append([idx]+pivot_entry[1])
+                
+        return pivots_idx, pivots
+               
+    def _one_pivot_test_a(self, idx, deg, neigh, pivots):        
+        neigh_ = [n for n in neigh if self._degrees[n]<self._degrees[idx]]
+        if len(neigh_)>0:
+            return False
+        return True
+        '''
+        # test        
+        if len(comm_seq(neigh_,pivots))==0:
             return True
         return False
+        '''
+
     def _one_pivot_test_b(self,idx,deg,neigh):
-        #print(self.pivot_entries[idx])
         for n_idx in neigh:
-            n_deg = self.pivot_entries[n_idx][0]
-            if n_deg > 2*deg-2:
+            if self._degrees[n_idx] > 2*deg-2:
                 return False
         return True
     def _one_pivot_test_c(self,idx,deg,neigh):
         C_h = [idx]
         E_C_h = set([]) 
         for h, n_idx in enumerate(neigh):
-            n_neigh = self.pivot_entries[n_idx][1]
+            n_neigh = self._adjacency_list[n_idx]
             n_neigh.remove(idx)
             # subset test
-            n_iter = iter(neigh)
-            if not all(v in n_iter for v in n_neigh):
-                 return False
+            #n_iter = iter(neigh)
+            #if not all(v in n_iter for v in n_neigh):                
+            if not set(neigh).issubset(n_neigh):
+                return False
             C_h.append(n_idx)
             E_C_h = E_C_h.union([x for x in n_neigh if x not in neigh])
             if len(E_C_h)>h:
                 return False
-            
         return True
             
 
@@ -296,24 +324,26 @@ class IsolatedCliques(AdjacencyList):
         k = len(V)
         n_out_edges = 0
         for v in V:
-            n_out_edges += self.pivot_entries[v][0]-(k-1)
+            n_out_edges += self._degrees[v]-(k-1)
         return n_out_edges/k
 
-    def _evaluate_subgraph(self,V):
-        if self.debug_mode and not self._debug_check_order(V,False):
-            warn("DEBUG: Clique V is not sorted.")
-#            warn("V => ["+" ".join(map(str,V)) + "]")
+    def _evaluate_subgraph(self,S):
+        if self.debug_mode and not self._debug_check_order(S,False):
+            warn("DEBUG: Clique S is not sorted.")
+#            warn("V => ["+" ".join(map(str,S)) + "]")
             
-        k = len(V)
+        k = len(S)
         min_deg = k
         ave_deg = 0
         n_out_edges = 0
-        for v in V:
-            deg, neigh = self.pivot_entries[v]
-            inner_neigh = comm_seq(V,neigh)
-            n_out_edges += len(neigh)-len(inner_neigh)            
-            min_deg = min(min_deg,len(inner_neigh))
-            ave_deg += len(inner_neigh)
+        for v in S:
+            neigh = self._adjacency_list[v]
+            inner_neigh = comm_seq(S,neigh)
+            n_in = len(inner_neigh)
+            n_out_edges += len(neigh)-n_in            
+            min_deg = min(min_deg,n_in)
+            ave_deg += n_in
+            
         return n_out_edges/k, ave_deg/k, min_deg
 
 
@@ -324,8 +354,8 @@ class IsolatedCliques(AdjacencyList):
             return tmp-1
         return tmp2
 
-    def remove_check(self, removed,v,c_floor):
+    def remove_check(self, removed,v,c_floor, num_neigh_):
         removed.append(v)
-        if len(removed)>c_floor:
+        if len(removed)+num_neigh_>c_floor:
             return False,removed
         return True,removed
