@@ -108,9 +108,10 @@ def generate_community_graph(num_nodes,dim,num_communities,outlier_rate,gamma):
 
     AffinityMat = rbf_kernel(X,gamma=gamma)
     med = np.median(AffinityMat)
-    E = AffinityMat < med
+    E = (AffinityMat < med).astype(int)
+    
     for i in range(num_nodes):
-        E[i,i] = False
+        E[i,i] = 0
     return E, labels
 
 def is_same(cliques1,cliques2):
@@ -167,12 +168,15 @@ def test(args):
     communities = ics.choose_largest(iso_cliques,
                                      args.num_communities,
                                      skip_overlap=True)
-    labels_est = np.zeros(len(labels_gt))
+    labels_est = np.zeros(len(labels_gt),dtype='int32')
     for l, clique in enumerate(communities):
         l += 1 # offset for outliers
         for v in clique:
+            print(labels_est[v])
+            print(l)
             labels_est[v] = l
-    
+
+    print(labels_est)    
 
     score = adjusted_rand_score(labels_gt,labels_est)
     log['scores'] = {}
