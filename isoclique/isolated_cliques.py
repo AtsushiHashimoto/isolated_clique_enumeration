@@ -58,31 +58,52 @@ class IsolatedCliques(AdjacencyList):
         ics = self._enumerate_blute(isolation_factor,callback,at_most)
         return self.decode(ics,2)
         
-    def _enumerate_blute(self,isolation_factor=1.0,callback=None,at_most=-1):
+    def _enumerate_blute(self,isolation_factor=1.0,callback=None,at_most=-1,verbose=False):
         # CAUTION: This may be veryyyyy slow.
         if at_most<0:
             at_most = self.n_nodes
         ics = []
-        print("DO BLUTE SEARCH")
-        print(self._degrees)
+        if verbose:
+            print("DO BLUTE SEARCH")
         for N in range(at_most,0,-1):
             if callback:
                 isolation_factor = callback(N)
             cand_N = [c for c in range(self.n_nodes) if self._degrees[c]>=N-1]            
-            #print(N, ": ", cand_N, " -> search start...")
-            print(N)
+
+            if verbose:
+                print(N, ": ", cand_N, " -> search start...")
+
             for cand in iters.combinations(cand_N,N):
+                # skip a vertex without edges.
+                if N==1 and len(self._adjacency_list[cand[0]])==0:
+                    continue
                 (isolation,deg_ave,deg_min) = self._evaluate_subgraph(cand)
-                if deg_ave == N-1 and isolation < isolation_factor:
-                    #print(cand, ": ", (isolation,deg_ave,deg_min))
-                    ics.append(list(cand))
-            #print("done")
-        print("BLUTE SEARCH END")
-        return ics
-       
+
+                if not (deg_ave == N-1 and isolation <= isolation_factor):
+                    continue
+                cand = set(cand)
+                if not self._is_maximal_blute(cand,ics):
+                    continue
+                ics.append(list(cand))
+
+            if verbose:
+                print("done")
+
+        if verbose:
+            print("BLUTE SEARCH END")
+        return [list(c) for c in ics]
+
+    def _is_maximal_blute(self,clique, found_cliques):
+        for ref in found_cliques:
+            if clique.issubset(ref):
+                return False
+        return True
+    
     def enumerate(self,isolation_factor=1.0, callback=None):
         pivots, ics = self._enumerate(isolation_factor,callback)
-        return self.decode(pivots,1),self.decode(ics,2)
+        self.decode(pivots,1)
+        self.decode(ics,2)
+        return self.decode(pivots,1), self.decode(ics,2)
 
     def _enumerate(self,isolation_factor=1.0, callback=None):
         if isolation_factor==1.0 and not callback:
@@ -125,6 +146,10 @@ class IsolatedCliques(AdjacencyList):
         pivots_ref = []
         pivots = []     
         for idx,pivot_entry in enumerate(self.pivot_entries):
+            # this is not mentioned in the original paper,
+            # but calculation for a vertex with no edges is non-sense.
+            if self._degrees[idx]==0:
+                continue
             if callback:
                 isolation_factor = callback(self._degrees[idx])
             c_floor = self.my_floor(isolation_factor)
