@@ -108,14 +108,11 @@ class _AdjacencyList(LabelEncoder):
                 [item for sublist in edges for item in sublist] \
                 ))
 
-        if labels_ == list(range(len(labels))):
-            super(_AdjacencyList,self).__init__(labels_,encode_method=None)
-        else:
-            super(_AdjacencyList,self).__init__(labels_,encode_method=encode_method)
+        super(_AdjacencyList,self).__init__(labels_,encode_method=encode_method)
 
-        print("labels: ",labels_)
+        #print("labels: ",labels_)
         self.set_decode_lut(labels_)
-        print("encode_lut from above labels: ",self.encode_lut)
+        #print("encode_lut from above labels: ",self.encode_lut)
 
         self.n_nodes = len(labels_)
         _edges = self.encode(edges,2)
@@ -228,9 +225,9 @@ class _AdjacencyList(LabelEncoder):
                     warn("DEBUG: an array in edge matrix has invlid array size %s. It must be %s"%(len(arr),self.n_nodes))
                         
         neighbors = [[] for i in range(self.n_nodes)]
-        for i,j in iters.combinations(self.n_nodes,2):
-            neighbors[i].append[j]
-            neighbors[j].append[i]
+        for i,j in iters.combinations(range(self.n_nodes),2):
+            neighbors[i].append(j)
+            neighbors[j].append(i)
         return neighbors
 
             
@@ -303,13 +300,34 @@ class _AdjacencyList(LabelEncoder):
                     print(i, ": ", neigh)
                 return False
         return True
+    def _is_vertex_cover(self,S):
+        uncovered = set(range(self.n_nodes))
+        covered = set(flatten([self._adjacency_list[s] for s in S])+S)
+        return (len(uncovered - covered)==0)
+
+    def _enumerate_vertex_covers(self, at_most = -1, candidates=None):
+        if at_most<0:
+            at_most = self.n_nodes
+        if not candidates:
+            candidates = range(self.n_nodes)
+        VCs = []
+        for size in range(at_most,0,-1):
+            for vc in iters.combinations(candidates,size):
+                vc = list(vc)
+                if self._is_vertex_cover(vc):
+                    VCs.append(vc)
+        return VCs
+    
     def _print(self,message=""):
         if len(message)>0:
             print(message)
         for v,neigh in enumerate(self._adjacency_list):
             print(v,": ",neigh, " degree=> ("+str(self._degrees[v])+"): ",", ".join(["("+str(self._degrees[n])+")" for n in neigh]))
 
-
+'''
+A Graph that have edges as Neighbors for each graph.
+A simple graph is expected.
+'''
 class AdjacencyList(_AdjacencyList):
     def __init__(self, edges, edge_list_format='list',\
                  labels='auto',encode_method='list',\
@@ -326,7 +344,7 @@ class AdjacencyList(_AdjacencyList):
     def vertices(self):
         return self._labels     
         
-    def subgraph(self, S, do_sort=False):
+    def subgraph(self, S, do_sort=False,use_in_global=True):
         S_ = self.encode(S,1)
         adj_list = self._subgraph(S_, False)
         
@@ -334,8 +352,14 @@ class AdjacencyList(_AdjacencyList):
                              labels=S_,\
                              encode_method='list',debug_mode=self.debug_mode,
                              do_sort=do_sort)
-        G_S.set_parent(self)
+        if use_in_global:
+            G_S.set_parent(self)
         return G_S
+    def enumerate_vertex_covers(self, at_most = -1, candidates=None):
+        if candidates:
+            candidates = self.encode(candidates,2)
+        VCs = self._enumerate_vertex_covers(at_most,candidates)
+        return self._decode(VCs,2)
 
 # get a mapping look-up-table from a set A to another set B        
 def get_map_lut(A,B):
@@ -367,22 +391,5 @@ def comm_seq(arr_1, arr_2):
     elif arr_1[m] > arr_2[n]:
         return comm_seq(arr_1[:-1], arr_2)
 
-
-def vertex_cover(V,G, at_most=-1,V_search=None):
-    VCs = []
-    if not V_search:
-        V_search = V
-    if at_most<0:
-        at_most = len(V_search)
-
-    for k in range(at_most,0,-1):
-        for vc_cand in iters.combinations(V_search,k):
-            covered_nodes = set(vc_cand+sum([G[x] for x in vc_cand]))
-            if len(covered_nodes)<len(V):
-                continue
-            VCs.append(vc_cand)
-
-    return VCs
-        
-
-
+def flatten(l):
+    return [item for sublist in l for item in sublist]
