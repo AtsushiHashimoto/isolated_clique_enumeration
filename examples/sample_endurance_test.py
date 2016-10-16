@@ -8,12 +8,15 @@ import isolated_cliques as ics
 import math
 import time
 import numpy as np
-from warnings import warn
-from sklearn.datasets import make_blobs
-from argparse import ArgumentParser
+from scipy import stats
 
+from sklearn.datasets import make_blobs
 from sklearn.metrics.pairwise import rbf_kernel
 from sklearn.metrics import f1_score, adjusted_rand_score, adjusted_mutual_info_score
+
+from warnings import warn
+from argparse import ArgumentParser
+
 
 def parser():
     usage = 'Usage: python {} [--verbose] [-N <INT>] [-C <INT>]'.format(__file__) 
@@ -107,8 +110,9 @@ def generate_community_graph(num_nodes,dim,num_communities,outlier_rate,gamma):
     labels = np.r_[np.zeros(len(l)),labels+1]
 
     AffinityMat = rbf_kernel(X,gamma=gamma)
-    med = np.median(AffinityMat)
-    E = (AffinityMat < med).astype(int)
+    threshold = stats.scoreatpercentile(AffinityMat, 95) # to use arbitrary point value.
+    #threshold = np.median(AffinityMat)
+    E = (AffinityMat < threshold).astype(int)
     
     for i in range(num_nodes):
         E[i,i] = 0
@@ -117,6 +121,10 @@ def generate_community_graph(num_nodes,dim,num_communities,outlier_rate,gamma):
 def is_same(cliques1,cliques2):
     c1 = sorted([tuple(sorted(c)) for c in cliques1],key=lambda x:len(x))
     c2 = sorted([tuple(sorted(c)) for c in cliques2],key=lambda x:len(x))
+    print("C1!")
+    print(c1)
+    print("C2!")
+    print(c2)
     return c1==c2
 
 def test(args):
@@ -129,14 +137,18 @@ def test(args):
         print("[Graph]")
         print(E)
         print("[labels (community)]")
-        print(labels)
+        print(labels_gt)
         
     log = {}
     start = time.time()
     ic_graph = ics.IsolatedCliques(E,
-                                   edge_list_format='mat')
+                                   edge_list_format='mat')    
+
+    
     elapsed_time = time.time()-start
     log['time for sorting'] = elapsed_time
+    if args.verbose:
+        print("time for sorting: ",elapsed_time, "sec.")
 
     if args.logk:
         def callback(k):
@@ -146,35 +158,52 @@ def test(args):
         callback = None
         isolation_factor = args.isolation_factor        
 
+    # DO EFFICIENT SEARCH
     start = time.time()
     pivots, iso_cliques = ic_graph.enumerate(callback=callback,isolation_factor = isolation_factor)
     elapsed_time = time.time()-start    
-    log['time for enumeration'] = elapsed_time
-
+    log['time for enumeration [EFFICIENT WAY]:'] = elapsed_time
     if args.verbose:
-        print(iso_cliques)
+        print("time for enumeration",elapsed_time, "sec.")
 
+    if True or args.verbose:
+        print("[obtained cliques]")
+        for clique in iso_cliques:            
+            print(clique)
+            (isolation,deg_ave,deg_min) = ic_graph._evaluate_subgraph(clique)
+            print(isolation,deg_ave,deg_min)
+
+    # DO BLUTE FORCE SEARCH
     start = time.time()
     iso_cliques_blute = ic_graph.enumerate_blute(callback=callback,isolation_factor = isolation_factor)
     elapsed_time = time.time()-start    
     log['time for enumeration (in blute force)'] = elapsed_time
+    if args.verbose:
+        print("time for enumeration [BLUTE FORCE]: ",elapsed_time, "sec.")
 
-    # check if the results are same.
-    log['is the valid result?'] = is_same(iso_cliques,iso_cliques_blute)
+    if args.verbose:
+        print("[obtaine cliques by (blute force]")
+        for clique in iso_cliques_blute:            
+            print(clique)
+    
+    # CHECK THE RESULTS
+    log['is the valid result?'] = is_same(iso_cliques, iso_cliques_blute)
     if args.verbose:
         print("Is the results same?: ", log['is the valid result?'])
         
-    # evaluate as a method for community extraction
+    # EVALUATE as CLUSTERING & OUTLIER DETECTION
     communities = ics.choose_largest(iso_cliques,
                                      args.num_communities,
-                                     skip_overlap=True)
+                                     skip_overlap=False)
+    if args.verbose:
+        print("communities:",communities)
+
     labels_est = np.zeros(len(labels_gt),dtype='int32')
     for l, clique in enumerate(communities):
-        l += 1 # offset for outliers
+        # offset for outliers
+        print(clique)
         for v in clique:
-            print(labels_est[v])
-            print(l)
-            labels_est[v] = l
+            labels_est[v] = l+1           
 
     print(labels_est)    
 
