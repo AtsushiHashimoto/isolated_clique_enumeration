@@ -68,6 +68,12 @@ if __name__ == '__main__':
     for v,neigh in zip(nodes,neighbors):
         print(v,": ", neigh)
 
+    Gs = sorted_graph.subgraph([4,5,6,7,8])
+    print(Gs.edges(edge_list_format='list'))
+    Gs.complement()
+    print(Gs.edges(edge_list_format='list'))
+    
+
     sys.exit()
 
 
