@@ -359,7 +359,10 @@ class AdjacencyList(_AdjacencyList):
         return self._labels     
         
     def subgraph(self, S, do_sort=False,use_in_global=True):
-        S_ = self.encode(S,1)
+        if use_in_global:
+            S_ = self.encode(S,1)
+        else:
+            S_ = S
         adj_list = self._subgraph(S_, False)
         
         G_S = AdjacencyList(adj_list, edge_list_format='neighbors', \

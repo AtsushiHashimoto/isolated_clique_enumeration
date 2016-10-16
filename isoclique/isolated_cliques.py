@@ -112,13 +112,11 @@ class IsolatedCliques(AdjacencyList):
         return self.decode(pivots,1), self.decode(ics,2)
 
     def _enumerate(self,isolation_factor=1.0, callback=None):
+        
         if isolation_factor==1.0 and not callback:
-            pivots, ics = self._enumerate1()
+            #pivots, ics = self._enumerate1() # <= bug?
+            pivots, ics = self._enumerate_gen(isolation_factor,callback)
         else:
-            '''
-            c_floor = self.my_floor(isolation_factor)
-            pivots, ics = self._enumerate_gen(isolation_factor,c_floor)
-            '''
             pivots, ics = self._enumerate_gen(isolation_factor,callback)
 
         # decode clique members 
