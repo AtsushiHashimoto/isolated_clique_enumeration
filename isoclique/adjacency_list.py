@@ -99,7 +99,6 @@ class _AdjacencyList(LabelEncoder):
         
         # Graph State Flags
         self.is_sorted = False
-        self.is_clique = None
 
         if labels != 'auto':
             labels_ = labels
@@ -141,7 +140,7 @@ class _AdjacencyList(LabelEncoder):
         self._degrees = np.zeros(self.n_nodes,dtype='int32')
         for i in range(self.n_nodes):
             self._degrees[i]=len(self._adjacency_list[i])
-        self.n_edges = np.sum(self._degrees) / 2
+        self.n_edges = int(np.sum(self._degrees) / 2)
 
 
         if not do_sort:
@@ -249,14 +248,13 @@ class _AdjacencyList(LabelEncoder):
             return mat
 
         e = 0
-        edges = [None] * self.n_edges * 2
+        edges = []
         for i in range(self.n_nodes):
             for j in self._adjacency_list[i]:
                 if i > j:
-                    edges[e] = [j,i]
+                    edges.append((j,i))
                 else:
-                    edges[e] = [i,j]
-                e += 1
+                    edges.append((i,j))
         return list(set(edges))
 
 
@@ -274,7 +272,6 @@ class _AdjacencyList(LabelEncoder):
                 c_adjacency_list[j].append(i)
                 self.was_clique = False
         self._adjacency_list = c_adjacency_list
-        self._sort_nodes()
         
     def _debug_check_self_loop(self):
         return all([idx not in neigh for idx,neigh in enumerate(self._adjacency_list)])         
@@ -304,10 +301,16 @@ class _AdjacencyList(LabelEncoder):
                     print(i, ": ", neigh)
                 return False
         return True
-    def _is_vertex_cover(self,S):
-        uncovered = set(range(self.n_nodes))
-        covered = set(flatten([self._adjacency_list[s] for s in S])+S)
-        return (len(uncovered - covered)==0)
+    def _is_vertex_cover(self,S,edges=None):
+        if not edges:
+            edges = self.__conv(edge_list_format='list')
+        
+        for e in edges:
+            if e[0] not in S:
+                return False
+            if e[1] not in S:
+                return False
+        return True
 
     def _enumerate_vertex_covers(self, at_most = -1, candidates=None):
         if at_most<0:
@@ -315,11 +318,12 @@ class _AdjacencyList(LabelEncoder):
         if not candidates:
             candidates = range(self.n_nodes)
         VCs = []
+        edges = self.__conv(edge_list_format='list')
         for size in range(at_most,0,-1):
             for vc in iters.combinations(candidates,size):
                 vc = list(vc)
-                if self._is_vertex_cover(vc):
-                    VCs.append(vc)
+                if self._is_vertex_cover(vc,edges):
+                    VCs.append(vc)                
         return VCs
     
     def _print(self,message=""):
@@ -327,6 +331,12 @@ class _AdjacencyList(LabelEncoder):
             print(message)
         for v,neigh in enumerate(self._adjacency_list):
             print(v,": ",neigh, " degree=> ("+str(self._degrees[v])+"): ",", ".join(["("+str(self._degrees[n])+")" for n in neigh]))
+
+    def is_clique(self):
+        for neigh in self._adjacency_list:
+            if len(set(neigh))!=self.n_nodes-1:
+                return False
+        return True
 
 '''
 A Graph that have edges as Neighbors for each graph.
@@ -364,6 +374,10 @@ class AdjacencyList(_AdjacencyList):
             candidates = self.encode(candidates,2)
         VCs = self._enumerate_vertex_covers(at_most,candidates)
         return self._decode(VCs,2)
+    def is_vertex_cover(self, S, edges=None):
+        return self._is_vertex_cover(self._encode(S,1),edges)
+        
+
 
 # get a mapping look-up-table from a set A to another set B        
 def get_map_lut(A,B):
