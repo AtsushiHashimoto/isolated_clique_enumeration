@@ -2,13 +2,13 @@
 # coding: utf-8
 
 import sys
-import numpy as np
 sys.path.append('../isoclique')
-import isolated_cliques as ic
+import isolated_cliques as ics
 import networkx as nx
 import matplotlib.pyplot as plt
 import random
 
+import math
 import time
 
 def generate_random_color():
@@ -20,24 +20,47 @@ def generate_random_color_list(num):
     return colors
 
 if __name__ == '__main__':
-    G = nx.karate_club_graph()
-    print(G.edges())
+    
+    
+    E = nx.karate_club_graph().edges()
+
 
     start = time.time()
-    ic_graph = ic.IsolatedCliques(G.edges())
+    ic_graph = ics.IsolatedCliques(E)
     elapsed_time = time.time()-start
     print("%.5f sec. elapsed for graph sorting."%elapsed_time)
 
+    nodes = ic_graph.nodes()
+    edges = ic_graph.edges()
+    for v,neigh in zip(nodes,edges):
+        print(v,": ", neigh)
 
-    iso_cliques = ic_graph.enumerate(isolation_factor=3)
+    isolation_factor = 2
+    def callback(k):
+        return isolation_factor*math.log(k)
+
+
+
+    start = time.time()
+#    pivots, iso_cliques = ic_graph.enumerate(isolation_factor=isolation_factor)
+    pivots, iso_cliques = ic_graph.enumerate(callback=callback)
     elapsed_time = time.time()-start
     print("%.5f sec. elapsed for enumeration."%elapsed_time)
+    
 
     print("Isolated Cliques")
-    for ic in iso_cliques:
+    for pivot, ic in zip(pivots,iso_cliques):
         stats = ic_graph.evaluate_subgraph(ic)
-        print("[isolation, ave_deg, min_deg] = ",list(stats))
-        print("Members: ",ic)
+        print("Pivot: ",pivot, " => [",ic,"]") # ic_graph.decode(ic,1)
+
+#    _ics = ic_graph.enumerate_blute(isolation_factor=isolation_factor, at_most=-1)
+    _ics = ic_graph.enumerate_blute(callback=callback, at_most=-1)
+    for ic in _ics:
+        stats = ic_graph.evaluate_subgraph(ic)
+        print(ic) # ic_graph.decode(ic,1)
+
+    
+
     sys.exit()
 
 
