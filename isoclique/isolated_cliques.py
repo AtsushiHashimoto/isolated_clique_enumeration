@@ -15,21 +15,23 @@ from adjacency_list import AdjacencyList, comm_seq
 '''
 def choose_largest(cliques, k=-1, skip_overlap=False):
     cliques = sorted(cliques,key=lambda x: len(x))
+    cliques.reverse()
     if skip_overlap:
         return cliques[:k] 
 
     if k<=0:
         k = len(cliques)
-    covered = {}
+    covered = set([])
     largests = []
     for clique in cliques:
         if any([v in covered for v in clique]):
             continue
-        covered.add(tuple(clique))
+        covered = covered.union(clique)
         largests.append(clique)
         if len(largests)==k:
             break
     return largests
+
 
 class IsolatedCliques(AdjacencyList):
     def __init__(self, \
@@ -136,7 +138,7 @@ class IsolatedCliques(AdjacencyList):
             if not self._one_pivot_test_c(idx,*pivot_entry):
                 continue
             pivots_idx.append(idx)
-            pivots.append((idx,[idx]+pivot_entry[1]))
+            pivots.append([idx]+pivot_entry[1])
                 
         return pivots_idx, pivots
         
@@ -177,8 +179,7 @@ class IsolatedCliques(AdjacencyList):
             return []
 
         Qs = set([tuple(q) for q in Qs])
-        Qs = [q for q in Qs if self._evaluate_subgraph_assume_clique(q)<c]
-        
+        Qs = [q for q in Qs if self._evaluate_subgraph_assume_clique(q)<c]        
         
         return list(Qs)
         
@@ -262,7 +263,7 @@ class IsolatedCliques(AdjacencyList):
             return True
         return False
     def _one_pivot_test_b(self,idx,deg,neigh):
-        print(self.pivot_entries[idx])
+        #print(self.pivot_entries[idx])
         for n_idx in neigh:
             n_deg = self.pivot_entries[n_idx][0]
             if n_deg > 2*deg-2:
