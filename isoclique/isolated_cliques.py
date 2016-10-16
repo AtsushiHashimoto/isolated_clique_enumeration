@@ -4,7 +4,7 @@
 import math
 from warnings import warn
 import itertools as iters
-from adjacency_list import AdjacencyList, comm_seq
+from adjacency_list import AdjacencyList, comm_seq,flatten
 
 
 '''
@@ -49,8 +49,8 @@ class IsolatedCliques(AdjacencyList):
                                              )
 
 
-    def evaluate_subgraph(self,V,assume_clique=False):
-        V = self.encode(V,1)
+    def evaluate_subgraph(self,S,assume_clique=False):
+        V = self.encode(S,1)
         if assume_clique:
             return self._evaluate_subgraph_assume_clique(V), None, None
         return self._evaluate_subgraph(V)
@@ -58,7 +58,7 @@ class IsolatedCliques(AdjacencyList):
     def enumerate_blute(self,isolation_factor=1.0,callback=None,at_most=-1):
         ics = self._enumerate_blute(isolation_factor,callback,at_most)
         return self.decode(ics,2)
-        
+    
     def _enumerate_blute(self,isolation_factor=1.0,callback=None,at_most=-1,verbose=False):
         # CAUTION: This may be veryyyyy slow.
         if at_most<0:
@@ -76,29 +76,30 @@ class IsolatedCliques(AdjacencyList):
 
             for cand in iters.combinations(cand_N,N):
                 # skip a vertex without edges.
+                cand = list(cand)
                 if N==1 and len(self._adjacency_list[cand[0]])==0:
                     continue
                 (isolation,deg_ave,deg_min) = self._evaluate_subgraph(cand)
 
-                if not (deg_ave == N-1 and isolation < isolation_factor):
+                if isolation >= isolation_factor:                    
+                    continue
+                if deg_min < N-1:
                     continue
                 cand = set(cand)
-                if not self._is_maximal_blute(cand,ics):
+                if not self._is_maximal(cand,ics):
                     continue
-                G_S = self.subgraph(cand,do_sort=False,use_in_global=False)
-                is_clique = G_S.is_clique()
-                if not is_clique:
-                    print(cand,"is not a clique")
-                ics.append(list(cand))
+                print(isolation, "<-", cand)
+                ics.append(cand)                
 
             if verbose:
                 print("done")
 
         if verbose:
             print("BLUTE SEARCH END")
-        return [list(c) for c in ics]
+        print(ics)
+        return ics
 
-    def _is_maximal_blute(self,clique, found_cliques):
+    def _is_maximal(self,clique, found_cliques):
         for ref in found_cliques:
             if clique.issubset(ref):
                 return False
@@ -131,9 +132,9 @@ class IsolatedCliques(AdjacencyList):
 
 #    def _enumerate_gen(self,c,c_floor):        
     def _enumerate_gen(self,isolation_factor,callback):        
-        pivots_idx = []
-        pivots_ref = []
-        pivots = []     
+        #pivots_idx = []
+        pivots_ics = {}
+        #iso_cliques = []
         for idx,pivot_entry in enumerate(zip(self._degrees,self._adjacency_list)):
             # this is not mentioned in the original paper,
             # but calculation for a vertex with no edges is non-sense.
@@ -142,43 +143,41 @@ class IsolatedCliques(AdjacencyList):
             if callback:
                 isolation_factor = callback(self._degrees[idx])
             c_floor = self.my_floor(isolation_factor)
-
             C = self._pivot_trim(idx,*pivot_entry,isolation_factor, c_floor)
             if C == False:               
                 continue
             Qs = self._pivot_enum(idx,*pivot_entry,C,isolation_factor,c_floor)
             if len(Qs)==0:
                 continue
-            Qs = self._pivot_scr(idx,Qs,pivots_idx,pivots,isolation_factor,pivot_entry[1])
-            if len(Qs)>0:
-                pivots_idx.append(idx)
-                pivots_ref += [idx] * len(Qs)
-                pivots += Qs
+            Qs = self._pivot_scr(
+                idx,
+                Qs,
+                pivots_ics,
+                isolation_factor,
+                pivot_entry[1])
+            if len(Qs)==0:
+                continue            
+            pivots_ics[idx] = Qs
 
-        return pivots_ref, pivots
+        return pivots_ics.keys(), flatten(pivots_ics.values())
 
     '''
     Utility member functions.
     '''
-    def _pivot_scr(self,idx,Qs,pivots_idx,pivots,c,neigh):
-        neigh_ = [n for n in neigh if self._degrees[n]<self._degrees[idx]]
-        if len(set(pivots).intersection(neigh_))>0:
-            return []
+    def _pivot_scr(self,idx,Qs,pivots_ics,c,neigh):
+        # compare all IsoCliques whose pivot is in N_ (N_=neigh_
+        neigh_ = set([n for n in neigh if self._degrees[n]<=self._degrees[idx]])
 
-        Qs = set([tuple(q) for q in Qs])
-        for q in Qs:
-            iscore = self._evaluate_subgraph_assume_clique(q)
-            iscore2 = self._evaluate_subgraph(q)[0]
-            if(iscore==iscore2):
-                continue                   
-            print("####")
-            print(q)
-            G_S = self.subgraph(q, do_sort=False, use_in_global=False)
-            print(G_S.edges(edge_list_format='list'))
-            G_S.complement()
-            print(G_S.edges(edge_list_format='list'))
-        Qs = [q for q in Qs if self._evaluate_subgraph_assume_clique(q)<c]        
-        #print(Qs)
+
+        #Qs = [q for q in Qs if self._evaluate_subgraph_assume_clique(q)<c]        
+        Qs = [q for q in Qs if self._evaluate_subgraph(q)[0]<c]
+        for pivot_j in neigh_.intersection(pivots_ics.keys()):
+            for q in Qs:
+                q_set = set(q)
+                for q_j in pivots_ics[pivot_j]:
+                    if q_set.issubset(q_j):
+                        Qs.remove(q)
+                        break
         return list(Qs)
         
     def _pivot_enum(self, idx, deg, neigh,C,c,c_floor):
@@ -186,12 +185,15 @@ class IsolatedCliques(AdjacencyList):
         c_dash = c_floor - (len(neigh)-len(C))
         G_C = self.subgraph(C,do_sort=False,use_in_global=False)        
         G_C.complement(is_dense=True)
+
+        # if there is no edges in complement graph, return it as a clique.
         if G_C.was_clique:
             Qs = [C]
         else:
+            # enumerate vertex covers: now it is in a blute force search.
             VCs = G_C.enumerate_vertex_covers(at_most = c_dash, candidates=C.copy().remove(idx))
             Qs = [[v for v in C if v not in vc] for vc in VCs]            
-        return Qs
+        return [q for q in Qs if len(q)>0]
         
     def _pivot_trim(self, idx, deg, neigh, c, c_floor):
         neigh_ = [n for n in neigh if self._degrees[n]<self._degrees[idx]]
@@ -318,13 +320,12 @@ class IsolatedCliques(AdjacencyList):
     def _check_c_validity(self,c):
         if c<=0:
             raise Exception('negative value is invalid')
-            
-
+                                                          
     def _evaluate_subgraph_assume_clique(self,V):
         k = len(V)
-        n_out_edges = 0
+        n_out_edges = 0.0
         for v in V:
-            n_out_edges += self._degrees[v]-(k-1)
+            n_out_edges += max(0,self._degrees[v]-(k-1))
         return n_out_edges/k
 
     def _evaluate_subgraph(self,S):
@@ -343,7 +344,7 @@ class IsolatedCliques(AdjacencyList):
             n_out_edges += len(neigh)-n_in            
             min_deg = min(min_deg,n_in)
             ave_deg += n_in
-            
+        
         return n_out_edges/k, ave_deg/k, min_deg
 
 
