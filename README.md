@@ -1,8 +1,8 @@
-# CAUTION
-This program does not calculate exact solution because of bugs. Do not use before those bugs are fixed!
-
 # How to use
 see sample codes under 'example' directory.
+
+# Not-yet content
+isolated pseudo cliques are not yet implemented.
 
 # Cite
 This algorithm is provided in the following thesis.
@@ -17,3 +17,4 @@ This algorithm is provided in the following thesis.
       year={2009},
       publisher={ACM}
     }
+   
