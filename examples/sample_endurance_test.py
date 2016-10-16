@@ -172,10 +172,10 @@ def test(args):
 
     if True or args.verbose:
         print("[obtained cliques]")
-        for clique in iso_cliques:            
-            print(clique)
-            (isolation,deg_ave,deg_min) = ic_graph._evaluate_subgraph(clique)
-            print(isolation,deg_ave,deg_min)
+        for pivot,clique in zip(pivots,iso_cliques):            
+            print(ic_graph.encode(pivot,0),":",ic_graph.encode(clique,1))
+            (iso,avg_deg,min_deg) = ic_graph.evaluate_subgraph(clique)
+            print("isolation: ",iso)
 
     # DO BLUTE FORCE SEARCH
     start = time.time()
@@ -189,6 +189,8 @@ def test(args):
         print("[obtaine cliques by (blute force)]")
         for clique in iso_cliques_blute:            
             print(clique)
+            (iso,avg_deg,min_deg) = ic_graph.evaluate_subgraph(clique)
+            print("isolation: ",iso)
     
     # CHECK THE RESULTS
     log['is the valid result?'] = is_same(iso_cliques, iso_cliques_blute)
@@ -231,8 +233,13 @@ def main(args):
 
 
         result = test(args)
-        print("Adjusted Rand score: ",result['scores']['Adjusted RAND index'])
-        print("F1 Measure         : ",result['scores']['F1 Measure'])
+        if not result['is the valid result?']:
+            print("The result is not valid. Please check and type [Enter]:")
+            line = input()
+            
+        # scores
+#        print("Adjusted Rand score: ",result['scores']['Adjusted RAND index'])
+#        print("F1 Measure         : ",result['scores']['F1 Measure'])
         
 #        if args.verbose:
 #            print(result)
@@ -244,42 +251,3 @@ if __name__ == '__main__':
     args = parser()
     print(args)
     main(args)
-
-    sys.exit()
-    start = time.time()
-    ic_graph = ics.IsolatedCliques(E)
-    elapsed_time = time.time()-start
-    print("%.5f sec. elapsed for graph sorting."%elapsed_time)
-
-    nodes = ic_graph.nodes()
-    edges = ic_graph.edges()
-    for v,neigh in zip(nodes,edges):
-        print(v,": ", neigh)
-
-    isolation_factor = 2
-    def callback(k):
-        return isolation_factor*math.log(k)
-
-
-
-    start = time.time()
-#    pivots, iso_cliques = ic_graph.enumerate(isolation_factor=isolation_factor)
-    pivots, iso_cliques = ic_graph.enumerate(callback=callback)
-    elapsed_time = time.time()-start
-    print("%.5f sec. elapsed for enumeration."%elapsed_time)
-    
-
-    print("Isolated Cliques")
-    for pivot, ic in zip(pivots,iso_cliques):
-        stats = ic_graph.evaluate_subgraph(ic)
-        print("Pivot: ",pivot, " => [",ic,"]") # ic_graph.decode(ic,1)
-
-#    _ics = ic_graph.enumerate_blute(isolation_factor=isolation_factor, at_most=-1)
-    _ics = ic_graph.enumerate_blute(callback=callback, at_most=-1)
-    for ic in _ics:
-        stats = ic_graph.evaluate_subgraph(ic)
-        print(ic) # ic_graph.decode(ic,1)
-
-    
-
-    sys.exit()
