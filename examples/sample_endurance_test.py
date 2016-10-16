@@ -4,6 +4,7 @@
 import sys
 sys.path.append('../isoclique')
 import isolated_cliques as ics
+import isolated_pseudo_cliques as ipcs
 
 import math
 import time
@@ -33,6 +34,9 @@ def parser():
                            help='stop if a result differ from that obtained from blute forth enumeration.')
 
     # params for Isolated Clique Enumeration
+    argparser.add_argument('-p','--pseudo',
+                           action='store_true',
+                           help='use pseudo clique enumeration.')
     argparser.add_argument('--logk',
                            action='store_true',
                            help='use "f(k) = c*log(k)" as isolation factor')
@@ -110,7 +114,7 @@ def generate_community_graph(num_nodes,dim,num_communities,outlier_rate,gamma):
     labels = np.r_[np.zeros(len(l)),labels+1]
 
     AffinityMat = rbf_kernel(X,gamma=gamma)
-    threshold = stats.scoreatpercentile(AffinityMat, 95) # to use arbitrary point value.
+    threshold = stats.scoreatpercentile(AffinityMat, 50) # to use arbitrary point value.
     #threshold = np.median(AffinityMat)
     E = (AffinityMat < threshold).astype(int)
     
@@ -121,10 +125,6 @@ def generate_community_graph(num_nodes,dim,num_communities,outlier_rate,gamma):
 def is_same(cliques1,cliques2):
     c1 = sorted([tuple(sorted(c)) for c in cliques1],key=lambda x:len(x))
     c2 = sorted([tuple(sorted(c)) for c in cliques2],key=lambda x:len(x))
-    print("C1!")
-    print(c1)
-    print("C2!")
-    print(c2)
     return c1==c2
 
 def test(args):
@@ -141,7 +141,11 @@ def test(args):
         
     log = {}
     start = time.time()
-    ic_graph = ics.IsolatedCliques(E,
+    if args.pseudo:
+        ic_graph = ipcs.IsolatedPseudoCliques(E,
+                                   edge_list_format='mat')
+    else:
+        ic_graph = ics.IsolatedCliques(E,
                                    edge_list_format='mat')    
 
     
@@ -182,7 +186,7 @@ def test(args):
         print("time for enumeration [BLUTE FORCE]: ",elapsed_time, "sec.")
 
     if args.verbose:
-        print("[obtaine cliques by (blute force]")
+        print("[obtaine cliques by (blute force)]")
         for clique in iso_cliques_blute:            
             print(clique)
     
@@ -201,11 +205,9 @@ def test(args):
     labels_est = np.zeros(len(labels_gt),dtype='int32')
     for l, clique in enumerate(communities):
         # offset for outliers
-        print(clique)
         for v in clique:
             labels_est[v] = l+1           
 
-    print(labels_est)    
 
     score = adjusted_rand_score(labels_gt,labels_est)
     log['scores'] = {}
@@ -229,8 +231,11 @@ def main(args):
 
 
         result = test(args)
-        if args.verbose:
-            print(result)
+        print("Adjusted Rand score: ",result['scores']['Adjusted RAND index'])
+        print("F1 Measure         : ",result['scores']['F1 Measure'])
+        
+#        if args.verbose:
+#            print(result)
 
 
 
