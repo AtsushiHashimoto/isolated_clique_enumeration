@@ -3,8 +3,7 @@
 
 import sys
 sys.path.append('../isoclique')
-import adjacency_list as al
-#import isolated_cliques as ic
+import isoclique as ic
 
 
 import random
@@ -39,7 +38,7 @@ if __name__ == '__main__':
     random.shuffle(V) 
 
     print("indicated label order: ",V)
-    G = al.AdjacencyList(E,labels=V,do_sort=True,encode_method=encode_method)
+    G = ic.AdjacencyList(E,labels=V,do_sort=True,encode_method=encode_method)
     nodes = G.nodes()
     edges = G.edges()
     print("G(V,E):")

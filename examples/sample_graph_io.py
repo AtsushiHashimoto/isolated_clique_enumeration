@@ -3,8 +3,7 @@
 
 import sys
 sys.path.append('../isoclique')
-import adjacency_list as al
-#import isolated_cliques as ic
+import isoclique as ic
 import networkx as nx
 import random
 
@@ -47,7 +46,7 @@ if __name__ == '__main__':
     print("WITHOUT_SORT")
     start = time.time()
     print("start to constust AdjacencyList.")
-    sorted_graph = al.AdjacencyList(E,do_sort=False,encode_method=encode_method)
+    sorted_graph = ic.AdjacencyList(E,do_sort=False,encode_method=encode_method)
     elapsed_time = time.time()-start
     print("%.5f sec. elapsed for graph sorting."%elapsed_time)
 
@@ -59,7 +58,7 @@ if __name__ == '__main__':
 
     print("WITH_SORT")
     start = time.time()
-    sorted_graph = al.AdjacencyList(E,do_sort=True,encode_method=encode_method)
+    sorted_graph = ic.AdjacencyList(E,do_sort=True,encode_method=encode_method)
     elapsed_time = time.time()-start
     print("%.5f sec. elapsed for graph sorting."%elapsed_time)
 

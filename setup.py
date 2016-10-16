@@ -13,5 +13,5 @@ setup(
         url              = 'https://github.com/AtsushiHashimoto/isolated_clique_enumeration.git',
         keywords         = 'isolated cliques',
         packages         = find_packages(),
-        install_requires = [numpy],
+        install_requires = ['numpy'],
         )

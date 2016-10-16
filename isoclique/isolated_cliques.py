@@ -4,7 +4,7 @@
 import math
 from warnings import warn
 import itertools as iters
-from adjacency_list import AdjacencyList, comm_seq,flatten
+from .adjacency_list import AdjacencyList, comm_seq,flatten
 
 
 '''

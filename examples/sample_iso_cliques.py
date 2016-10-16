@@ -3,7 +3,7 @@
 
 import sys
 sys.path.append('../isoclique')
-import isolated_cliques as ics
+import isoclique as ic
 import networkx as nx
 import matplotlib.pyplot as plt
 import random
@@ -26,7 +26,7 @@ if __name__ == '__main__':
 
 
     start = time.time()
-    ic_graph = ics.IsolatedCliques(E)
+    ic_graph = ic.IsolatedCliques(E)
     elapsed_time = time.time()-start
     print("%.5f sec. elapsed for graph sorting."%elapsed_time)
 

@@ -3,8 +3,7 @@
 
 import sys
 sys.path.append('../isoclique')
-import isolated_cliques as ics
-import isolated_pseudo_cliques as ipcs
+import isoclique as ic
 
 import math
 import time
@@ -142,10 +141,10 @@ def test(args):
     log = {}
     start = time.time()
     if args.pseudo:
-        ic_graph = ipcs.IsolatedPseudoCliques(E,
+        ic_graph = ic.IsolatedPseudoCliques(E,
                                    edge_list_format='mat')
     else:
-        ic_graph = ics.IsolatedCliques(E,
+        ic_graph = ic.IsolatedCliques(E,
                                    edge_list_format='mat')    
 
     
@@ -198,7 +197,7 @@ def test(args):
         print("Is the results same?: ", log['is the valid result?'])
         
     # EVALUATE as CLUSTERING & OUTLIER DETECTION
-    communities = ics.choose_largest(iso_cliques,
+    communities = ic.choose_largest(iso_cliques,
                                      args.num_communities,
                                      skip_overlap=False)
     if args.verbose:
