@@ -4,7 +4,7 @@
 import math
 from warnings import warn
 import itertools as iters
-from isolated_cliques import IsolatedCliques
+from .isolated_cliques import IsolatedCliques
 
 
 '''
@@ -31,6 +31,14 @@ class IsolatedPseudoCliques(IsolatedCliques):
     def enumerate_blute(self,isolation_factor=1.0,callback=None,at_most=-1):
         ics = self._enumerate_blute(isolation_factor,callback,at_most)
         return self.decode(ics,2)
+
+    def _blute_test(self, cand, c, inf_ave,inf_min):
+        (isolation,deg_ave,deg_min) = self._evaluate_subgraph(cand)
+        if (deg_ave >= inf_ave
+            and deg_min >= inf_min
+            and isolation < c):
+           return True
+        return False
         
     def _enumerate_blute(self,isolation_factor=1.0,
                          callback=None, at_most=-1,
@@ -54,10 +62,7 @@ class IsolatedPseudoCliques(IsolatedCliques):
                 # skip a vertex without edges.
                 if N<2 and len(self._adjacency_list[cand[0]])==0:
                     continue
-                (isolation,deg_ave,deg_min) = self._evaluate_subgraph(cand)
-                if not (deg_ave >= inf_ave
-                        and deg_min >= inf_min
-                        and isolation < isolation_factor):
+                if not self._blute_test(cand, isolation_factor,inf_ave,inf_min):
                     continue
                 cand = set(cand)
                 if not self._is_maximal_blute(cand,ics):
@@ -107,11 +112,8 @@ class IsolatedPseudoCliques(IsolatedCliques):
                     continue
                 inf_ave = N-math.log(N)
                 inf_min = N/math.log(N)
-                (isolation,deg_ave,deg_min) = self._evaluate_subgraph(cand)
-                if not (deg_ave >= inf_ave
-                        and deg_min >= inf_min
-                        and isolation < c):
-                    continue
+                if not self._blute_test(cand,c,inf_ave,inf_min):
+                    continue                    
                 cand = set(cand)                
                 if not self._is_maximal_blute(cand,ipcs):
                     continue

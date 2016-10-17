@@ -3,6 +3,7 @@
 
 from .isolated_cliques import *
 from .adjacency_list import *
+from .isolated_pseudo_cliques import *
 
  
 __author__  = 'AtsushiHashimoto'
