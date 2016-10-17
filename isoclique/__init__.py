@@ -7,5 +7,5 @@ from .isolated_pseudo_cliques import *
 
  
 __author__  = 'AtsushiHashimoto'
-__version__ = '0.0.5' 
+__version__ = '0.1.0' 
 __license__ = 'MIT'
