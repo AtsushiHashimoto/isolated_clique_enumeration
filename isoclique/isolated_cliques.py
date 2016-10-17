@@ -49,11 +49,6 @@ class IsolatedCliques(AdjacencyList):
                                              )
 
 
-    def evaluate_subgraph(self,S,assume_clique=False):
-        V = self.encode(S,1)
-        if assume_clique:
-            return self._evaluate_subgraph_assume_clique(V), None, None
-        return self._evaluate_subgraph(V)
         
     def enumerate_blute(self,isolation_factor=1.0,callback=None,at_most=-1):
         ics = self._enumerate_blute(isolation_factor,callback,at_most)
@@ -88,7 +83,7 @@ class IsolatedCliques(AdjacencyList):
                 cand = set(cand)
                 if not self._is_maximal(cand,ics):
                     continue
-                print(isolation, "<-", cand)
+                #print(isolation, "<-", cand)
                 ics.append(cand)                
 
             if verbose:
@@ -179,7 +174,6 @@ class IsolatedCliques(AdjacencyList):
         return list(Qs)
         
     def _pivot_enum(self, idx, deg, neigh,C,c,c_floor):
-#        neigh_ = [n for n in neigh if n<idx]
         c_dash = c_floor - (len(neigh)-len(C))
         G_C = self.subgraph(C,do_sort=False,use_in_global=False)        
         G_C.complement(is_dense=True)
@@ -318,7 +312,14 @@ class IsolatedCliques(AdjacencyList):
     def _check_c_validity(self,c):
         if c<=0:
             raise Exception('negative value is invalid')
-                                                          
+
+    def evaluate_subgraph(self,S,assume_clique=False):
+        V = self.encode(S,1)
+        #print(S, " > encode > ", V)
+        if assume_clique:
+            return self._evaluate_subgraph_assume_clique(V), None, None
+        return self._evaluate_subgraph(V)
+                                                         
     def _evaluate_subgraph_assume_clique(self,V):
         k = len(V)
         n_out_edges = 0.0
@@ -330,19 +331,18 @@ class IsolatedCliques(AdjacencyList):
         if self.debug_mode and not self._debug_check_order(S,False):
             warn("DEBUG: Clique S is not sorted.")
 #            warn("V => ["+" ".join(map(str,S)) + "]")
-            
+        S = set(S)
         k = len(S)
         min_deg = k
         ave_deg = 0
         n_out_edges = 0
         for v in S:
             neigh = self._adjacency_list[v]
-            inner_neigh = comm_seq(S,neigh)
+            inner_neigh = S.intersection(neigh)
             n_in = len(inner_neigh)
-            n_out_edges += len(neigh)-n_in            
+            n_out_edges += len(neigh)-n_in
             min_deg = min(min_deg,n_in)
             ave_deg += n_in
-        
         return n_out_edges/k, ave_deg/k, min_deg
 
 
