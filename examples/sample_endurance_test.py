@@ -146,8 +146,6 @@ def test(args):
     else:
         ic_graph = ic.IsolatedCliques(E,
                                    edge_list_format='mat')    
-
-    
     elapsed_time = time.time()-start
     log['time for sorting'] = elapsed_time
     if args.verbose:
@@ -161,6 +159,10 @@ def test(args):
         callback = None
         isolation_factor = args.isolation_factor        
 
+    if args.verbose:
+        for node,neigh in zip(ic_graph.nodes(),ic_graph.edges()):
+            print(node, ": ",neigh)
+    
     # DO EFFICIENT SEARCH
     start = time.time()
     pivots, iso_cliques = ic_graph.enumerate(callback=callback,isolation_factor = isolation_factor)
@@ -172,10 +174,12 @@ def test(args):
     if True or args.verbose:
         print("[obtained cliques]")
         for pivot,clique in zip(pivots,iso_cliques):            
-            print(ic_graph.encode(pivot,0),":",ic_graph.encode(clique,1))
+            print(pivot,":",sorted(clique))
             (iso,avg_deg,min_deg) = ic_graph.evaluate_subgraph(clique)
-            print("isolation: ",iso)
+            print("isolation: %0.1f"%iso, "average deg.: %0.1f"%avg_deg, "min deg: %0.1f"%min_deg)
 
+
+    
     # DO BLUTE FORCE SEARCH
     start = time.time()
     iso_cliques_blute = ic_graph.enumerate_blute(callback=callback,isolation_factor = isolation_factor)
@@ -187,15 +191,15 @@ def test(args):
     if args.verbose:
         print("[obtaine cliques by (blute force)]")
         for clique in iso_cliques_blute:            
-            print(clique)
+            print(sorted(clique))
             (iso,avg_deg,min_deg) = ic_graph.evaluate_subgraph(clique)
-            print("isolation: ",iso)
+            print("isolation: %0.1f"%iso, "average deg.: %0.1f"%avg_deg, "min deg: %0.1f"%min_deg)
     
     # CHECK THE RESULTS
     log['is the valid result?'] = is_same(iso_cliques, iso_cliques_blute)
     if args.verbose:
         print("Is the results same?: ", log['is the valid result?'])
-        
+    
     # EVALUATE as CLUSTERING & OUTLIER DETECTION
     communities = ic.choose_largest(iso_cliques,
                                      args.num_communities,
@@ -208,7 +212,7 @@ def test(args):
         # offset for outliers
         for v in clique:
             labels_est[v] = l+1           
-
+    
 
     score = adjusted_rand_score(labels_gt,labels_est)
     log['scores'] = {}
